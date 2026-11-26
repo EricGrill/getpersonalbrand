@@ -30,7 +30,7 @@ export default async function DashboardPage() {
   }
 
   // Check if user needs to complete onboarding
-  if (!user.site || (user.site.content as any[]).length === 0) {
+  if (!user.site || (user.site.content as unknown[]).length === 0) {
     redirect("/onboarding")
   }
 
@@ -83,7 +83,7 @@ export default async function DashboardPage() {
           </div>
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="text-2xl font-bold text-gray-900">
-              {(user.site?.content as any[])?.length || 0}
+              {(user.site?.content as unknown[])?.length || 0}
             </div>
             <div className="text-sm text-gray-500">Content Blocks</div>
           </div>
