@@ -9,9 +9,42 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "GetPersonalBrand - Build Your Personal Brand Website",
+  metadataBase: new URL("https://getpersonalbrand.com"),
+  title: {
+    default: "GetPersonalBrand | One site. All of you.",
+    template: "%s | GetPersonalBrand",
+  },
   description:
-    "Create a professional personal brand website in minutes. Combine your links, bio, and portfolio into one beautiful site.",
+    "Replace your link in bio, about page, and portfolio with one free personal website. Build with a drag-and-drop editor, custom domains, and analytics.",
+  applicationName: "GetPersonalBrand",
+  keywords: ["personal website", "portfolio builder", "link in bio", "personal brand"],
+  icons: {
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    shortcut: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/apple-touch-icon.png", type: "image/png" }],
+  },
+  openGraph: {
+    type: "website",
+    siteName: "GetPersonalBrand",
+    title: "GetPersonalBrand | One site. All of you.",
+    description:
+      "Your links, story, and best work together on one free personal website.",
+    images: [
+      {
+        url: "/share-card.png",
+        width: 1200,
+        height: 630,
+        alt: "GetPersonalBrand. One site. All of you.",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "GetPersonalBrand | One site. All of you.",
+    description:
+      "Your links, story, and best work together on one free personal website.",
+    images: ["/share-card.png"],
+  },
 }
 
 export default function RootLayout({
