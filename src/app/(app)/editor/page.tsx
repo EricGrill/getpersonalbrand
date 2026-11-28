@@ -31,6 +31,8 @@ export default async function EditorPage() {
       initialBlocks={blocks}
       initialTheme={theme}
       isPublished={user.site.published}
+      initialPublishedBlocks={user.site.publishedContent as unknown as Block[] | null}
+      initialPublishedTheme={user.site.publishedTheme as unknown as SiteTheme | null}
     />
   )
 }

@@ -9,16 +9,20 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 import { Block } from "@/types/blocks"
 import { BlockRenderer } from "@/components/blocks"
-import { GripVertical, Trash2 } from "lucide-react"
+import { GripVertical, Trash2, ArrowUp, ArrowDown } from "lucide-react"
+import styles from "./EditorCanvas.module.css"
 
 interface SortableBlockProps {
   block: Block
   primaryColor: string
   onUpdate: (blockId: string, data: Block["data"]) => void
   onDelete: (blockId: string) => void
+  onMove: (blockId: string, direction: -1 | 1) => void
+  first: boolean
+  last: boolean
 }
 
-function SortableBlock({ block, primaryColor, onUpdate, onDelete }: SortableBlockProps) {
+function SortableBlock({ block, primaryColor, onUpdate, onDelete, onMove, first, last }: SortableBlockProps) {
   const {
     attributes,
     listeners,
@@ -41,28 +45,34 @@ function SortableBlock({ block, primaryColor, onUpdate, onDelete }: SortableBloc
       className="group relative bg-white rounded-lg border border-gray-200 hover:border-blue-300 transition-colors"
     >
       {/* Drag Handle and Delete */}
-      <div className="absolute -left-10 top-1/2 -translate-y-1/2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center justify-end gap-1 border-b border-gray-100 p-1">
         <button
           {...attributes}
           {...listeners}
-          className="p-1 bg-gray-100 rounded hover:bg-gray-200 cursor-grab"
+          aria-label={`Reorder ${block.type} block`}
+          className="touch-none p-2 bg-gray-100 rounded hover:bg-gray-200 cursor-grab"
         >
           <GripVertical className="w-4 h-4 text-gray-500" />
         </button>
+        <button aria-label={`Move ${block.type} block up`} disabled={first} onClick={() => onMove(block.id, -1)} className="p-2 rounded hover:bg-gray-100 disabled:opacity-30"><ArrowUp className="w-4 h-4" /></button>
+        <button aria-label={`Move ${block.type} block down`} disabled={last} onClick={() => onMove(block.id, 1)} className="p-2 rounded hover:bg-gray-100 disabled:opacity-30"><ArrowDown className="w-4 h-4" /></button>
         <button
+          aria-label={`Delete ${block.type} block`}
           onClick={() => onDelete(block.id)}
-          className="p-1 bg-red-100 rounded hover:bg-red-200"
+          className="p-2 bg-red-100 rounded hover:bg-red-200"
         >
           <Trash2 className="w-4 h-4 text-red-500" />
         </button>
       </div>
 
+      <div className={styles.blockContent} data-block-type={block.type}>
       <BlockRenderer
         block={block}
         isEditing={true}
         onUpdate={(data) => onUpdate(block.id, data)}
         primaryColor={primaryColor}
       />
+      </div>
     </div>
   )
 }
@@ -72,6 +82,7 @@ interface EditorCanvasProps {
   primaryColor: string
   onUpdateBlock: (blockId: string, data: Block["data"]) => void
   onDeleteBlock: (blockId: string) => void
+  onMoveBlock: (blockId: string, direction: -1 | 1) => void
 }
 
 export function EditorCanvas({
@@ -79,17 +90,18 @@ export function EditorCanvas({
   primaryColor,
   onUpdateBlock,
   onDeleteBlock,
+  onMoveBlock,
 }: EditorCanvasProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: "canvas",
   })
 
   return (
-    <div className="flex-1 bg-gray-50 p-8 overflow-y-auto">
+    <div className="flex-1 min-h-0 min-w-0 bg-gray-50 p-2 md:p-6 overflow-y-auto">
       <div className="max-w-3xl mx-auto">
         <div
           ref={setNodeRef}
-          className={`min-h-[600px] p-4 rounded-lg transition-colors ${
+          className={`min-h-full p-1 md:p-4 rounded-lg transition-colors ${
             isOver ? "bg-blue-50 border-2 border-dashed border-blue-300" : ""
           }`}
         >
@@ -97,7 +109,7 @@ export function EditorCanvas({
             <div className="h-[400px] flex items-center justify-center text-gray-400 border-2 border-dashed border-gray-300 rounded-lg">
               <div className="text-center">
                 <p className="text-lg mb-2">Your canvas is empty</p>
-                <p className="text-sm">Drag blocks from the sidebar to get started</p>
+                <p className="text-sm">Add a block or drag one here to get started</p>
               </div>
             </div>
           ) : (
@@ -105,14 +117,17 @@ export function EditorCanvas({
               items={blocks.map((b) => b.id)}
               strategy={verticalListSortingStrategy}
             >
-              <div className="space-y-4 pl-12">
-                {blocks.map((block) => (
+              <div className="space-y-4">
+                {blocks.map((block, index) => (
                   <SortableBlock
                     key={block.id}
                     block={block}
                     primaryColor={primaryColor}
                     onUpdate={onUpdateBlock}
                     onDelete={onDeleteBlock}
+                    onMove={onMoveBlock}
+                    first={index === 0}
+                    last={index === blocks.length - 1}
                   />
                 ))}
               </div>

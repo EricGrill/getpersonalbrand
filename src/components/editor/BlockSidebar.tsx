@@ -29,9 +29,10 @@ const BLOCK_TYPES: BlockTypeConfig[] = [
 
 interface DraggableBlockTypeProps {
   config: BlockTypeConfig
+  onAdd: (type: BlockType) => void
 }
 
-function DraggableBlockType({ config }: DraggableBlockTypeProps) {
+function DraggableBlockType({ config, onAdd }: DraggableBlockTypeProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `new-${config.type}`,
     data: {
@@ -43,37 +44,44 @@ function DraggableBlockType({ config }: DraggableBlockTypeProps) {
   const Icon = config.icon
 
   return (
-    <div
+    <button
+      type="button"
+      onClick={() => onAdd(config.type)}
+      aria-label={`Add ${config.label} block`}
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      className={`p-3 border border-gray-200 rounded-lg cursor-grab hover:border-blue-500 hover:bg-blue-50 transition-colors ${
+      onKeyDown={undefined}
+      aria-describedby={undefined}
+      aria-roledescription={undefined}
+      aria-pressed={undefined}
+      className={`w-full text-left p-2 md:p-3 border border-gray-200 rounded-lg cursor-grab hover:border-blue-500 hover:bg-blue-50 transition-colors ${
         isDragging ? "opacity-50" : ""
       }`}
     >
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+        <div className="hidden md:flex w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
           <Icon className="w-5 h-5 text-gray-600" />
         </div>
         <div>
           <div className="font-medium text-gray-900">{config.label}</div>
-          <div className="text-xs text-gray-500">{config.description}</div>
+          <div className="hidden md:block text-xs text-gray-500">{config.description}</div>
         </div>
       </div>
-    </div>
+    </button>
   )
 }
 
-export function BlockSidebar() {
+export function BlockSidebar({ onAddBlock }: { onAddBlock: (type: BlockType) => void }) {
   return (
-    <div className="w-72 bg-white border-r border-gray-200 p-4 overflow-y-auto">
-      <h3 className="font-semibold text-gray-900 mb-4">Add Blocks</h3>
-      <p className="text-sm text-gray-500 mb-4">
-        Drag blocks to the canvas to build your page
+    <div className="shrink-0 w-full md:w-60 bg-white border-r border-b border-gray-200 p-2 md:p-4 md:overflow-y-auto">
+      <h3 className="font-semibold text-gray-900 mb-2">Add Blocks</h3>
+      <p className="hidden md:block text-sm text-gray-500 mb-4">
+        Select a block to add it, or drag it to the canvas
       </p>
-      <div className="space-y-2">
+      <div className="grid grid-cols-3 gap-2 md:grid-cols-1">
         {BLOCK_TYPES.map((config) => (
-          <DraggableBlockType key={config.type} config={config} />
+          <DraggableBlockType key={config.type} config={config} onAdd={onAddBlock} />
         ))}
       </div>
     </div>

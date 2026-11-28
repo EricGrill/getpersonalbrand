@@ -26,7 +26,7 @@ const FONT_OPTIONS = [
 
 export function ThemePanel({ theme, onUpdate }: ThemePanelProps) {
   return (
-    <div className="w-72 bg-white border-l border-gray-200 p-4 overflow-y-auto">
+    <div className="shrink-0 w-full md:w-64 max-h-[40dvh] md:max-h-none bg-white border-l border-gray-200 p-4 overflow-y-auto">
       <h3 className="font-semibold text-gray-900 mb-4">Theme Settings</h3>
 
       {/* Primary Color */}
@@ -51,16 +51,18 @@ export function ThemePanel({ theme, onUpdate }: ThemePanelProps) {
         </div>
         <div className="flex items-center gap-2">
           <input
+            aria-label="Primary color picker"
             type="color"
             value={theme.primaryColor}
             onChange={(e) => onUpdate({ ...theme, primaryColor: e.target.value })}
             className="w-8 h-8 rounded cursor-pointer"
           />
           <input
+            aria-label="Primary color"
             type="text"
             value={theme.primaryColor}
             onChange={(e) => onUpdate({ ...theme, primaryColor: e.target.value })}
-            className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded"
+            className="min-w-0 flex-1 px-2 py-1 text-sm border border-gray-300 rounded"
           />
         </div>
       </div>
@@ -71,6 +73,7 @@ export function ThemePanel({ theme, onUpdate }: ThemePanelProps) {
           Font Family
         </label>
         <select
+          aria-label="Font family"
           value={theme.font}
           onChange={(e) => onUpdate({ ...theme, font: e.target.value })}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg"
