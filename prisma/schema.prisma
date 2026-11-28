@@ -15,12 +15,16 @@ model User {
   username      String    @unique
   image         String?
   emailVerified DateTime?
+  disabledAt    DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts Account[]
-  sessions Session[]
-  site     Site?
+  accounts                Account[]
+  sessions                Session[]
+  site                    Site?
+  passwordResetTokens     PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  uploads                 Upload[]
 }
 
 model Account {
@@ -59,42 +63,129 @@ model VerificationToken {
 }
 
 model Site {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  content   Json     @default("[]")
-  theme     Json     @default("{}")
-  published Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  content          Json      @default("[]")
+  theme            Json      @default("{}")
+  published        Boolean   @default(false)
+  publishedContent Json?
+  publishedTheme   Json?
+  publishedAt      DateTime?
+  suspendedAt      DateTime?
+  suspendedReason  String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   domains         Domain[]
   analyticsEvents AnalyticsEvent[]
+  contactMessages ContactMessage[]
+  abuseReports    AbuseReport[]
 }
 
 model Domain {
-  id         String    @id @default(cuid())
-  siteId     String
-  domain     String    @unique
-  status     String    @default("pending_verification")
-  verifiedAt DateTime?
-  createdAt  DateTime  @default(now())
+  id            String    @id @default(cuid())
+  siteId        String
+  domain        String    @unique
+  status        String    @default("pending_verification")
+  verifiedAt    DateTime?
+  verification  Json?
+  lastCheckedAt DateTime?
+  lastError     String?
+  createdAt     DateTime  @default(now())
 
   site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 }
 
 model AnalyticsEvent {
-  id         String   @id @default(cuid())
-  siteId     String
-  eventType  String
-  linkId     String?
-  referrer   String?
-  country    String?
-  deviceType String?
-  timestamp  DateTime @default(now())
+  id          String   @id @default(cuid())
+  siteId      String
+  eventType   String
+  linkId      String?
+  referrer    String?
+  country     String?
+  deviceType  String?
+  visitorHash String?
+  timestamp   DateTime @default(now())
 
   site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   @@index([siteId, timestamp])
   @@index([siteId, eventType])
+  @@index([siteId, eventType, timestamp])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ContactMessage {
+  id        String    @id @default(cuid())
+  siteId    String
+  name      String
+  email     String
+  message   String    @db.Text
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([siteId, createdAt])
+}
+
+model AbuseReport {
+  id            String    @id @default(cuid())
+  siteId        String
+  reason        String
+  details       String?   @db.Text
+  reporterEmail String?
+  createdAt     DateTime  @default(now())
+  resolvedAt    DateTime?
+  resolution    String?
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+}
+
+model Upload {
+  id          String   @id @default(cuid())
+  userId      String
+  url         String   @unique
+  pathname    String
+  size        Int
+  contentType String
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model RateLimit {
+  key         String
+  windowStart DateTime
+  count       Int
+
+  @@id([key, windowStart])
 }
