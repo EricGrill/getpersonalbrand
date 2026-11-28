@@ -1,0 +1,33 @@
+.blockContent input,
+.blockContent textarea,
+.blockContent select {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.blockContent[data-block-type="links"] button:has(input),
+.blockContent[data-block-type="links"] button:has(input) > div {
+  min-width: 0;
+}
+
+.blockContent[data-block-type="links"] svg {
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  .blockContent[data-block-type="links"] div:has(> button > div > input) {
+    flex-wrap: wrap;
+  }
+
+  .blockContent[data-block-type="links"] button:has(input) {
+    flex-basis: calc(100% - 2rem);
+  }
+
+  .blockContent[data-block-type="links"] button:has(input) > div {
+    flex-direction: column;
+  }
+
+  .blockContent[data-block-type="links"] div:has(> select) {
+    margin-left: auto;
+  }
+}

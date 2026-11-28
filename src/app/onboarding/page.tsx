@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { TEMPLATES, cloneTemplateBlocks, Template } from "@/lib/templates"
+import { siteContentSchema } from "@/lib/validation/site-content"
 import { Check, ArrowRight, ArrowLeft, Loader2 } from "lucide-react"
 
 type Step = "template" | "profile" | "links" | "complete"
@@ -21,15 +22,21 @@ export default function OnboardingPage() {
     { label: "LinkedIn", url: "", icon: "linkedin" },
   ])
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleTemplateSelect = (template: Template) => {
     setSelectedTemplate(template)
   }
 
   const handleNext = () => {
+    setError(null)
     if (step === "template" && selectedTemplate) {
       setStep("profile")
     } else if (step === "profile") {
+      if (!profile.name.trim()) {
+        setError("Enter your name before continuing.")
+        return
+      }
       setStep("links")
     } else if (step === "links") {
       handleComplete()
@@ -45,9 +52,10 @@ export default function OnboardingPage() {
   }
 
   const handleComplete = async () => {
-    if (!selectedTemplate) return
+    if (!selectedTemplate || saving) return
 
     setSaving(true)
+    setError(null)
 
     try {
       // Clone template blocks and update with user data
@@ -56,7 +64,7 @@ export default function OnboardingPage() {
       // Update hero block with profile data
       const heroBlock = blocks.find((b) => b.type === "hero")
       if (heroBlock && heroBlock.type === "hero") {
-        heroBlock.data.name = profile.name || "Your Name"
+        heroBlock.data.name = profile.name.trim() || "Your Name"
         heroBlock.data.headline = profile.headline || "Your Headline"
         heroBlock.data.bio = profile.bio || "Tell your story here..."
       }
@@ -72,24 +80,26 @@ export default function OnboardingPage() {
           }))
       }
 
-      // Save to API
+      const result = siteContentSchema.safeParse({ blocks, theme: selectedTemplate.theme })
+      if (!result.success) {
+        setError(result.error.issues[0]?.message || "Check your site details.")
+        return
+      }
+
       const response = await fetch("/api/onboarding/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          blocks,
-          theme: selectedTemplate.theme,
-        }),
+        body: JSON.stringify(result.data),
       })
 
-      if (response.ok) {
-        setStep("complete")
-        setTimeout(() => {
-          router.push("/editor")
-        }, 2000)
+      if (!response.ok) {
+        const body = await response.json().catch(() => null)
+        throw new Error(body?.error || "Could not create your site. Please try again.")
       }
+      setStep("complete")
+      router.push("/editor")
     } catch (error) {
-      console.error("Failed to save:", error)
+      setError(error instanceof Error ? error.message : "Could not create your site. Please try again.")
     } finally {
       setSaving(false)
     }
@@ -143,7 +153,8 @@ export default function OnboardingPage() {
         </div>
 
         {/* Step Content */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-8">
+          {error && <p role="alert" className="mb-4 text-sm text-red-700">{error}</p>}
           {step === "template" && (
             <>
               <h1 className="text-2xl font-bold text-gray-900 mb-2">
@@ -201,10 +212,12 @@ export default function OnboardingPage() {
 
               <div className="space-y-4 mb-8">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="profile-name" className="block text-sm font-medium text-gray-700 mb-1">
                     Your Name
                   </label>
                   <input
+                    id="profile-name"
+                    maxLength={200}
                     type="text"
                     value={profile.name}
                     onChange={(e) =>
@@ -216,10 +229,12 @@ export default function OnboardingPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="profile-headline" className="block text-sm font-medium text-gray-700 mb-1">
                     Headline
                   </label>
                   <input
+                    id="profile-headline"
+                    maxLength={300}
                     type="text"
                     value={profile.headline}
                     onChange={(e) =>
@@ -231,10 +246,12 @@ export default function OnboardingPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="profile-bio" className="block text-sm font-medium text-gray-700 mb-1">
                     Short Bio
                   </label>
                   <textarea
+                    id="profile-bio"
+                    maxLength={5000}
                     value={profile.bio}
                     onChange={(e) =>
                       setProfile((p) => ({ ...p, bio: e.target.value }))
@@ -249,6 +266,7 @@ export default function OnboardingPage() {
               <div className="flex justify-between">
                 <button
                   onClick={handleBack}
+                  disabled={saving}
                   className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900"
                 >
                   <ArrowLeft className="w-4 h-4" /> Back
@@ -274,8 +292,9 @@ export default function OnboardingPage() {
 
               <div className="space-y-3 mb-6">
                 {links.map((link, index) => (
-                  <div key={index} className="flex gap-3">
+                  <div key={index} className="flex flex-col sm:flex-row gap-3">
                     <select
+                      aria-label={`Link ${index + 1} icon`}
                       value={link.icon}
                       onChange={(e) =>
                         handleLinkChange(index, "icon", e.target.value)
@@ -292,20 +311,24 @@ export default function OnboardingPage() {
                     </select>
                     <input
                       type="text"
+                      aria-label={`Link ${index + 1} label`}
+                      maxLength={200}
                       value={link.label}
                       onChange={(e) =>
                         handleLinkChange(index, "label", e.target.value)
                       }
-                      className="w-32 px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full sm:w-32 px-3 py-2 border border-gray-300 rounded-lg"
                       placeholder="Label"
                     />
                     <input
                       type="url"
+                      aria-label={`Link ${index + 1} URL`}
+                      maxLength={2048}
                       value={link.url}
                       onChange={(e) =>
                         handleLinkChange(index, "url", e.target.value)
                       }
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+                      className="min-w-0 flex-1 px-3 py-2 border border-gray-300 rounded-lg"
                       placeholder="https://..."
                     />
                   </div>
@@ -314,6 +337,7 @@ export default function OnboardingPage() {
 
               <button
                 onClick={addLink}
+                disabled={links.length >= 50 || saving}
                 className="text-blue-600 hover:text-blue-700 text-sm font-medium mb-8"
               >
                 + Add another link
@@ -322,6 +346,7 @@ export default function OnboardingPage() {
               <div className="flex justify-between">
                 <button
                   onClick={handleBack}
+                  disabled={saving}
                   className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900"
                 >
                   <ArrowLeft className="w-4 h-4" /> Back
@@ -351,7 +376,7 @@ export default function OnboardingPage() {
                 <Check className="w-8 h-8 text-green-600" />
               </div>
               <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                Your site is ready!
+                Your site is published!
               </h1>
               <p className="text-gray-600">
                 Redirecting you to the editor...
