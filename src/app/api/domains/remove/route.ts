@@ -1,43 +1,23 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
+import { z } from "zod"
 import { authOptions } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import { DomainError, releaseDomain } from "@/lib/domains"
+import { domainsConfigured } from "@/lib/vercel-domains"
+
+const bodySchema = z.object({ domainId: z.string().min(1) })
 
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions)
-
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const { domainId } = await req.json()
-
-    // Get domain and verify ownership
-    const domain = await prisma.domain.findUnique({
-      where: { id: domainId },
-      include: {
-        site: {
-          select: { userId: true },
-        },
-      },
-    })
-
-    if (!domain || domain.site.userId !== session.user.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    // Delete domain
-    await prisma.domain.delete({
-      where: { id: domainId },
-    })
-
-    // In production, you would also:
-    // Remove the domain from Vercel using their API
-
+    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (!domainsConfigured()) return NextResponse.json({ error: "Custom domains are not available yet" }, { status: 503 })
+    const body = bodySchema.safeParse(await req.json().catch(() => null))
+    if (!body.success) return NextResponse.json({ error: "Enter a valid domain ID" }, { status: 400 })
+    await releaseDomain(body.data.domainId, session.user.id)
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Remove domain error:", error)
-    return NextResponse.json({ error: "Failed to remove domain" }, { status: 500 })
+    if (error instanceof DomainError) return NextResponse.json({ error: error.message, domain: error.domain }, { status: error.status })
+    return NextResponse.json({ error: "Failed to remove domain. Please try again." }, { status: 500 })
   }
 }
